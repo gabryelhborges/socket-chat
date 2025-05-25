@@ -1,0 +1,45 @@
+CREATE DATABASE app_chat;
+USE app_chat;
+
+CREATE TABLE usuarios (
+                          login VARCHAR(50) PRIMARY KEY,
+                          nome_completo VARCHAR(100) NOT NULL,
+                          email VARCHAR(100) NOT NULL UNIQUE,
+                          senha VARCHAR(50) NOT NULL,
+                          status VARCHAR(20) DEFAULT 'offline'
+);
+
+CREATE TABLE grupos (
+                        nome_grupo VARCHAR(50) PRIMARY KEY,
+                        login_criador VARCHAR(50),
+                        FOREIGN KEY (login_criador) REFERENCES usuarios(login)
+);
+
+CREATE TABLE membros_grupo (
+                               nome_grupo VARCHAR(50),
+                               login_usuario VARCHAR(50),
+                               PRIMARY KEY (nome_grupo, login_usuario),
+                               FOREIGN KEY (nome_grupo) REFERENCES grupos(nome_grupo),
+                               FOREIGN KEY (login_usuario) REFERENCES usuarios(login)
+);
+
+CREATE TABLE mensagens_offline (
+                                   id INT AUTO_INCREMENT PRIMARY KEY,
+                                   login_remetente VARCHAR(50),
+                                   login_destinatario VARCHAR(50),
+                                   nome_grupo VARCHAR(50),
+                                   conteudo_mensagem TEXT,
+                                   data_hora DATETIME,
+                                   FOREIGN KEY (login_remetente) REFERENCES usuarios(login),
+                                   FOREIGN KEY (login_destinatario) REFERENCES usuarios(login),
+                                   FOREIGN KEY (nome_grupo) REFERENCES grupos(nome_grupo)
+);
+
+CREATE TABLE solicitacoes_entrada_grupo (
+                                            nome_grupo VARCHAR(50),
+                                            login_usuario VARCHAR(50),
+                                            status VARCHAR(20) DEFAULT 'pendente',
+                                            PRIMARY KEY (nome_grupo, login_usuario),
+                                            FOREIGN KEY (nome_grupo) REFERENCES grupos(nome_grupo),
+                                            FOREIGN KEY (login_usuario) REFERENCES usuarios(login)
+);
