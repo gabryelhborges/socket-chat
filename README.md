@@ -69,59 +69,7 @@ Configurar o Banco de Dados:
 
 Crie o banco de dados app_chat no MySQL.
 
-Execute o script SQL abaixo para criar as tabelas necessárias:
-CREATE DATABASE app_chat;
-USE app_chat;
-
-CREATE TABLE usuarios (
-    login VARCHAR(50) PRIMARY KEY,
-    nome_completo VARCHAR(100) NOT NULL,
-    email VARCHAR(100) NOT NULL UNIQUE,
-    senha VARCHAR(50) NOT NULL,
-    status VARCHAR(20) DEFAULT 'offline'
-);
-
-CREATE TABLE grupos (
-    nome_grupo VARCHAR(50) PRIMARY KEY,
-    login_criador VARCHAR(50),
-    FOREIGN KEY (login_criador) REFERENCES usuarios(login)
-);
-
-CREATE TABLE membros_grupo (
-    nome_grupo VARCHAR(50),
-    login_usuario VARCHAR(50),
-    PRIMARY KEY (nome_grupo, login_usuario),
-    FOREIGN KEY (nome_grupo) REFERENCES grupos(nome_grupo),
-    FOREIGN KEY (login_usuario) REFERENCES usuarios(login)
-);
-
-CREATE TABLE mensagens_offline (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    login_remetente VARCHAR(50),
-    login_destinatario VARCHAR(50),
-    nome_grupo VARCHAR(50),
-    conteudo_mensagem TEXT,
-    data_hora DATETIME,
-    FOREIGN KEY (login_remetente) REFERENCES usuarios(login),
-    FOREIGN KEY (login_destinatario) REFERENCES usuarios(login),
-    FOREIGN KEY (nome_grupo) REFERENCES grupos(nome_grupo)
-);
-
-CREATE TABLE solicitacoes_entrada_grupo (
-    nome_grupo VARCHAR(50),
-    login_usuario VARCHAR(50),
-    status VARCHAR(20) DEFAULT 'pendente',
-    PRIMARY KEY (nome_grupo, login_usuario),
-    FOREIGN KEY (nome_grupo) REFERENCES grupos(nome_grupo),
-    FOREIGN KEY (login_usuario) REFERENCES usuarios(login)
-);
-
-
-Certifique-se de que o MySQL está configurado com usuário root e sem senha, ou atualize as credenciais em ServidorChat.java (USUARIO_BANCO e SENHA_BANCO).
-
-
-
-Baixar o Driver JDBC:
+Baixar o Driver JDBC(se não estiver com Maven):
 
 Faça o download do mysql-connector-java.jar de um repositório confiável (como o site oficial da Oracle ou Maven Central).
 Coloque o arquivo no diretório do projeto.
