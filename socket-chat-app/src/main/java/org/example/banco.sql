@@ -9,6 +9,15 @@ CREATE TABLE usuarios (
                           status VARCHAR(20) DEFAULT 'offline'
 );
 
+CREATE TABLE amizades (
+    usuario1 VARCHAR(50),
+    usuario2 VARCHAR(50),
+    status VARCHAR(20) DEFAULT 'pendente',
+    PRIMARY KEY (usuario1, usuario2),
+    FOREIGN KEY (usuario1) REFERENCES usuarios(login),
+    FOREIGN KEY (usuario2) REFERENCES usuarios(login)
+);
+
 CREATE TABLE grupos (
                         nome_grupo VARCHAR(50) PRIMARY KEY,
                         login_criador VARCHAR(50),

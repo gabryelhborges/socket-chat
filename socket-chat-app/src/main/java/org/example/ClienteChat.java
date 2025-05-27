@@ -29,7 +29,9 @@ public class ClienteChat {
         // Thread principal gerencia entrada do usuário
         Scanner scanner = new Scanner(System.in);
         System.out.println("Bem-vindo ao Aplicativo de Chat!");
-        System.out.println("Comandos disponíveis: REGISTRAR, ENTRAR, SAIR, STATUS, LISTAR_USUARIOS, LISTAR_GRUPOS, MSG_USUARIO, PMSG, CRIAR_GRUPO, ADICIONAR_A_GRUPO, SOLICITAR_ENTRADA_GRUPO, RESPOSTA_CONVITE_GRUPO, VOTAR_ENTRADA_GRUPO, MSG_GRUPO, MSG_GRUPO_ALVO, MSG_GRUPO_PRIVADA, SAIR_GRUPO");
+        System.out.println("Comandos disponíveis: REGISTRAR, ENTRAR, SAIR, STATUS, LISTAR_USUARIOS, LISTAR_GRUPOS, LISTAR_AMIZADES, " +
+                           "MSG_USUARIO, PMSG, CRIAR_GRUPO, ADICIONAR_A_GRUPO, SOLICITAR_ENTRADA_GRUPO, RESPOSTA_CONVITE_GRUPO, " +
+                           "VOTAR_ENTRADA_GRUPO, MSG_GRUPO, MSG_GRUPO_ALVO, MSG_GRUPO_PRIVADA, SAIR_GRUPO");
 
         while (true) {
             System.out.print("> ");
@@ -51,7 +53,23 @@ public class ClienteChat {
             try {
                 String mensagem;
                 while ((mensagem = entrada.readLine()) != null) {
-                    System.out.println(mensagem);
+                    if (mensagem.startsWith("SOLICITACAO_CONTATO")) {
+                        // Formato: SOLICITACAO_CONTATO remetente mensagem
+                        String[] partes = mensagem.split(" ", 3);
+                        String remetente = partes[1];
+                        String conteudo = partes.length > 2 ? partes[2] : "";
+                        System.out.println("\nSolicitação de contato de " + remetente + ": " + conteudo);
+                        System.out.println("Digite exatamente 'ACEITAR_CHAT " + remetente + "' para aceitar");
+                        System.out.println("ou 'RECUSAR_CHAT " + remetente + "' para recusar");
+                    } else if (mensagem.startsWith("CONTATO_ACEITO")) {
+                        String remetente = mensagem.split(" ")[1];
+                        System.out.println("\n" + remetente + " aceitou seu pedido de contato. Vocês agora podem conversar!");
+                    } else if (mensagem.startsWith("CONTATO_RECUSADO")) {
+                        String remetente = mensagem.split(" ")[1];
+                        System.out.println("\n" + remetente + " recusou seu pedido de contato.");
+                    } else {
+                        System.out.println(mensagem);
+                    }
                 }
             } catch (IOException e) {
                 e.printStackTrace();
