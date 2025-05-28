@@ -36,7 +36,9 @@ public class ClienteChat {
         while (true) {
             System.out.print("> ");
             String entradaUsuario = scanner.nextLine();
-            if (entradaUsuario.equalsIgnoreCase("sair")) break;
+            if (entradaUsuario.equalsIgnoreCase("sair")) {
+                break;
+            }
             saida.println(entradaUsuario);
         }
 

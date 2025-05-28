@@ -523,6 +523,13 @@ public class ServidorChat {
             String nomeGrupo = args[0];
             String resposta = args[1];
 
+            // Validação: só pode aceitar se houver solicitação pendente
+            Map<String, String> solicitacoes = solicitacoes_entrada.get(nomeGrupo);
+            if (solicitacoes == null || !"pendente".equals(solicitacoes.get(login))) {
+                saida.println("ERRO Não há solicitação pendente para você neste grupo");
+                return;
+            }
+
             if (resposta.equalsIgnoreCase("sim")) {
                 try {
                     PreparedStatement stmt = conexaoBanco.prepareStatement(
@@ -531,12 +538,14 @@ public class ServidorChat {
                     stmt.setString(2, login);
                     stmt.executeUpdate();
                     grupos.computeIfAbsent(nomeGrupo, k -> new HashSet<>()).add(login);
+                    solicitacoes.remove(login); // Remove a solicitação após aceitar
                     saida.println("OK Entrou no grupo " + nomeGrupo);
                     transmitirMensagemGrupo(nomeGrupo, login, login + " entrou no grupo");
                 } catch (SQLException e) {
                     saida.println("ERRO Falha ao entrar no grupo: " + e.getMessage());
                 }
             } else {
+                solicitacoes.remove(login); // Remove a solicitação após recusar
                 saida.println("OK Convite para o grupo " + nomeGrupo + " recusado");
             }
         }
@@ -606,6 +615,22 @@ public class ServidorChat {
             }
             String nomeGrupo = args[0];
             String mensagem = args[1];
+
+            // Validação: só permite se o usuário for membro do grupo
+            try {
+                PreparedStatement stmt = conexaoBanco.prepareStatement(
+                    "SELECT 1 FROM membros_grupo WHERE nome_grupo = ? AND login_usuario = ?");
+                stmt.setString(1, nomeGrupo);
+                stmt.setString(2, login);
+                ResultSet rs = stmt.executeQuery();
+                if (!rs.next()) {
+                    saida.println("ERRO Você não faz parte do grupo " + nomeGrupo);
+                    return;
+                }
+            } catch (SQLException e) {
+                saida.println("ERRO Falha ao verificar participação no grupo: " + e.getMessage());
+                return;
+            }
 
             try {
                 PreparedStatement stmt = conexaoBanco.prepareStatement(
