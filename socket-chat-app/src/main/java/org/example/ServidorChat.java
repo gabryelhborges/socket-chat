@@ -99,10 +99,18 @@ public class ServidorChat {
                     manipularMensagemUsuario(argumentos);
                     break;
                 case "ACEITAR_CHAT":
-                    manipularAceitarChat(argumentos);
+                    if (argumentos.isEmpty()) {
+                        saida.println("ERRO Formato inválido. Use ACEITAR_CHAT nomeUsuario");
+                    } else {
+                        manipularAceitarChat(argumentos);
+                    }
                     break;
                 case "RECUSAR_CHAT":
-                    manipularRecusarChat(argumentos);
+                    if (argumentos.isEmpty()) {
+                        saida.println("ERRO Formato inválido. Use RECUSAR_CHAT nomeUsuario");
+                    } else {
+                        manipularRecusarChat(argumentos);
+                    }
                     break;
                 case "PMSG":
                     manipularMensagemPrivada(argumentos);
@@ -133,6 +141,9 @@ public class ServidorChat {
                     break;
                 case "SAIR_GRUPO":
                     manipularSairGrupo(argumentos);
+                    break;
+                case "LISTAR_AMIZADES":
+                    listarAmizades();
                     break;
                 default:
                     saida.println("ERRO Comando desconhecido");
@@ -256,41 +267,169 @@ public class ServidorChat {
             String destinatario = args[0];
             String mensagem = args[1];
 
-            ManipuladorCliente manipuladorDestinatario = clientes.get(destinatario);
-            if (manipuladorDestinatario != null) {
-                manipuladorDestinatario.saida.println("NOVA_MSG " + login + " " + mensagem);
-                saida.println("OK Mensagem enviada para " + destinatario);
-            } else {
-                armazenarMensagemOffline(login, destinatario, null, mensagem);
-                saida.println("OK Mensagem enfileirada para usuário offline " + destinatario);
+            // Verificar se os usuários são amigos
+            try {
+                if (verificarAmizade(login, destinatario)) {
+                    // Se são amigos, enviar mensagem normalmente
+                    ManipuladorCliente manipuladorDestinatario = clientes.get(destinatario);
+                    if (manipuladorDestinatario != null) {
+                        manipuladorDestinatario.saida.println("NOVA_MSG " + login + " " + mensagem);
+                        saida.println("OK Mensagem enviada para " + destinatario);
+                    } else {
+                        armazenarMensagemOffline(login, destinatario, null, mensagem);
+                        saida.println("OK Mensagem enfileirada para usuário offline " + destinatario);
+                    }
+                } else {
+                    // Se não são amigos, enviar solicitação de contato
+                    ManipuladorCliente manipuladorDestinatario = clientes.get(destinatario);
+                    if (manipuladorDestinatario != null) {
+                        // Criar a solicitação de contato no banco de dados
+                        criarSolicitacaoAmizade(login, destinatario);
+                        manipuladorDestinatario.saida.println("SOLICITACAO_CONTATO " + login + " " + mensagem);
+                        saida.println("OK Solicitação de contato enviada para " + destinatario);
+                    } else {
+                        // Se o destinatário estiver offline, criar a solicitação e armazenar
+                        criarSolicitacaoAmizade(login, destinatario);
+                        saida.println("OK Solicitação de contato enfileirada para usuário offline " + destinatario);
+                    }
+                }
+            } catch (SQLException e) {
+                saida.println("ERRO Falha ao verificar amizade: " + e.getMessage());
             }
         }
 
         private void manipularAceitarChat(String remetente) {
-            saida.println("OK Chat aceito com " + remetente);
+            try {
+                // Verificar primeiro se o remetente existe no banco de dados
+                PreparedStatement checkUserStmt = conexaoBanco.prepareStatement(
+                        "SELECT login FROM usuarios WHERE login = ?");
+                checkUserStmt.setString(1, remetente);
+                ResultSet userRs = checkUserStmt.executeQuery();
+                
+                if (!userRs.next()) {
+                    saida.println("ERRO Usuário " + remetente + " não existe no sistema");
+                    return;
+                }
+                
+                // Verificar se existe uma solicitação pendente
+                PreparedStatement checkStmt = conexaoBanco.prepareStatement(
+                        "SELECT * FROM amizades WHERE " +
+                        "((usuario1 = ? AND usuario2 = ?) OR (usuario1 = ? AND usuario2 = ?)) " +
+                        "AND status = 'pendente'");
+                checkStmt.setString(1, remetente);
+                checkStmt.setString(2, login);
+                checkStmt.setString(3, login);
+                checkStmt.setString(4, remetente);
+                ResultSet rs = checkStmt.executeQuery();
+                
+                if (rs.next()) {
+                    // Atualizar status da amizade para aceita
+                    PreparedStatement updateStmt = conexaoBanco.prepareStatement(
+                            "UPDATE amizades SET status = 'aceita' WHERE " +
+                            "((usuario1 = ? AND usuario2 = ?) OR (usuario1 = ? AND usuario2 = ?)) " +
+                            "AND status = 'pendente'");
+                    updateStmt.setString(1, remetente);
+                    updateStmt.setString(2, login);
+                    updateStmt.setString(3, login);
+                    updateStmt.setString(4, remetente);
+                    int rowsAffected = updateStmt.executeUpdate();
+                    
+                    if (rowsAffected > 0) {
+                        // Notificar o remetente se estiver online
+                        ManipuladorCliente manipuladorRemetente = clientes.get(remetente);
+                        if (manipuladorRemetente != null) {
+                            manipuladorRemetente.saida.println("CONTATO_ACEITO " + login);
+                        }
+                        saida.println("OK Chat aceito com " + remetente);
+                    } else {
+                        saida.println("ERRO Falha ao atualizar status da amizade");
+                    }
+                } else {
+                    // Se não existir uma solicitação pendente, retornar erro
+                    saida.println("ERRO Não existe solicitação de contato pendente de " + remetente);
+                }
+            } catch (SQLException e) {
+                saida.println("ERRO Falha ao aceitar contato: " + e.getMessage());
+                e.printStackTrace();
+            }
         }
 
         private void manipularRecusarChat(String remetente) {
-            saida.println("OK Chat recusado com " + remetente);
+            try {
+                // Atualizar status da amizade para recusada
+                PreparedStatement stmt = conexaoBanco.prepareStatement(
+                        "UPDATE amizades SET status = 'recusada' WHERE " +
+                        "(usuario1 = ? AND usuario2 = ?) OR (usuario1 = ? AND usuario2 = ?)");
+                stmt.setString(1, remetente);
+                stmt.setString(2, login);
+                stmt.setString(3, login);
+                stmt.setString(4, remetente);
+                stmt.executeUpdate();
+                
+                // Notificar o remetente se estiver online
+                ManipuladorCliente manipuladorRemetente = clientes.get(remetente);
+                if (manipuladorRemetente != null) {
+                    manipuladorRemetente.saida.println("CONTATO_RECUSADO " + login);
+                }
+                
+                saida.println("OK Chat recusado com " + remetente);
+            } catch (SQLException e) {
+                saida.println("ERRO Falha ao recusar contato: " + e.getMessage());
+            }
         }
 
-        private void manipularMensagemPrivada(String argumentos) {
-            String[] args = argumentos.split(" ", 2);
-            if (args.length != 2) {
-                saida.println("ERRO Formato de mensagem privada inválido");
-                return;
+        // Método para verificar se dois usuários são amigos
+        private boolean verificarAmizade(String usuario1, String usuario2) throws SQLException {
+            PreparedStatement stmt = conexaoBanco.prepareStatement(
+                    "SELECT status FROM amizades WHERE " +
+                    "((usuario1 = ? AND usuario2 = ?) OR (usuario1 = ? AND usuario2 = ?)) " +
+                    "AND status = 'aceita'");
+            stmt.setString(1, usuario1);
+            stmt.setString(2, usuario2);
+            stmt.setString(3, usuario2);
+            stmt.setString(4, usuario1);
+            
+            try (ResultSet rs = stmt.executeQuery()) {
+                return rs.next(); // Se retornar algum resultado, são amigos
             }
-            String destinatario = args[0];
-            String mensagem = args[1];
+        }
 
-            ManipuladorCliente manipuladorDestinatario = clientes.get(destinatario);
-            if (manipuladorDestinatario != null) {
-                manipuladorDestinatario.saida.println("NOVA_MSG " + login + " " + mensagem);
-                saida.println("OK Mensagem privada enviada para " + destinatario);
-            } else {
-                armazenarMensagemOffline(login, destinatario, null, mensagem);
-                saida.println("OK Mensagem privada enfileirada para usuário offline " + destinatario);
+        // Método para criar uma solicitação de amizade no banco
+        private void criarSolicitacaoAmizade(String solicitante, String solicitado) throws SQLException {
+            // Verificar se o solicitado existe
+            PreparedStatement checkUserStmt = conexaoBanco.prepareStatement(
+                    "SELECT login FROM usuarios WHERE login = ?");
+            checkUserStmt.setString(1, solicitado);
+            ResultSet userRs = checkUserStmt.executeQuery();
+            
+            if (!userRs.next()) {
+                throw new SQLException("Usuário destinatário não existe no sistema");
             }
+            
+            // Verificar se já existe uma solicitação
+            PreparedStatement checkStmt = conexaoBanco.prepareStatement(
+                    "SELECT * FROM amizades WHERE " +
+                    "(usuario1 = ? AND usuario2 = ?) OR (usuario1 = ? AND usuario2 = ?)");
+            checkStmt.setString(1, solicitante);
+            checkStmt.setString(2, solicitado);
+            checkStmt.setString(3, solicitado);
+            checkStmt.setString(4, solicitante);
+            ResultSet rs = checkStmt.executeQuery();
+            
+            // Se não existir, criar uma nova
+            if (!rs.next()) {
+                PreparedStatement insertStmt = conexaoBanco.prepareStatement(
+                        "INSERT INTO amizades (usuario1, usuario2, status) VALUES (?, ?, 'pendente')");
+                insertStmt.setString(1, solicitante);
+                insertStmt.setString(2, solicitado);
+                insertStmt.executeUpdate();
+            }
+        }
+
+        // Método para manipular mensagens privadas (reaproveitando a lógica)
+        private void manipularMensagemPrivada(String argumentos) {
+            // Reaproveitando a mesma lógica que manipularMensagemUsuario
+            manipularMensagemUsuario(argumentos);
         }
 
         private void manipularCriarGrupo(String nomeGrupo) {
@@ -384,6 +523,13 @@ public class ServidorChat {
             String nomeGrupo = args[0];
             String resposta = args[1];
 
+            // Validação: só pode aceitar se houver solicitação pendente
+            Map<String, String> solicitacoes = solicitacoes_entrada.get(nomeGrupo);
+            if (solicitacoes == null || !"pendente".equals(solicitacoes.get(login))) {
+                saida.println("ERRO Não há solicitação pendente para você neste grupo");
+                return;
+            }
+
             if (resposta.equalsIgnoreCase("sim")) {
                 try {
                     PreparedStatement stmt = conexaoBanco.prepareStatement(
@@ -392,12 +538,14 @@ public class ServidorChat {
                     stmt.setString(2, login);
                     stmt.executeUpdate();
                     grupos.computeIfAbsent(nomeGrupo, k -> new HashSet<>()).add(login);
+                    solicitacoes.remove(login); // Remove a solicitação após aceitar
                     saida.println("OK Entrou no grupo " + nomeGrupo);
                     transmitirMensagemGrupo(nomeGrupo, login, login + " entrou no grupo");
                 } catch (SQLException e) {
                     saida.println("ERRO Falha ao entrar no grupo: " + e.getMessage());
                 }
             } else {
+                solicitacoes.remove(login); // Remove a solicitação após recusar
                 saida.println("OK Convite para o grupo " + nomeGrupo + " recusado");
             }
         }
@@ -467,6 +615,22 @@ public class ServidorChat {
             }
             String nomeGrupo = args[0];
             String mensagem = args[1];
+
+            // Validação: só permite se o usuário for membro do grupo
+            try {
+                PreparedStatement stmt = conexaoBanco.prepareStatement(
+                    "SELECT 1 FROM membros_grupo WHERE nome_grupo = ? AND login_usuario = ?");
+                stmt.setString(1, nomeGrupo);
+                stmt.setString(2, login);
+                ResultSet rs = stmt.executeQuery();
+                if (!rs.next()) {
+                    saida.println("ERRO Você não faz parte do grupo " + nomeGrupo);
+                    return;
+                }
+            } catch (SQLException e) {
+                saida.println("ERRO Falha ao verificar participação no grupo: " + e.getMessage());
+                return;
+            }
 
             try {
                 PreparedStatement stmt = conexaoBanco.prepareStatement(
@@ -632,6 +796,41 @@ public class ServidorChat {
 
         private String obterDataHoraAtual() {
             return new Timestamp(System.currentTimeMillis()).toString();
+        }
+
+        private void listarAmizades() {
+            if (login == null) {
+                saida.println("ERRO Não está logado");
+                return;
+            }
+            
+            try {
+                PreparedStatement stmt = conexaoBanco.prepareStatement(
+                        "SELECT CASE WHEN usuario1 = ? THEN usuario2 ELSE usuario1 END AS amigo, " +
+                        "status FROM amizades WHERE usuario1 = ? OR usuario2 = ?");
+                stmt.setString(1, login);
+                stmt.setString(2, login);
+                stmt.setString(3, login);
+                ResultSet rs = stmt.executeQuery();
+                
+                StringBuilder resposta = new StringBuilder("OK Suas amizades:\n");
+                boolean hasAmizades = false;
+                
+                while (rs.next()) {
+                    hasAmizades = true;
+                    String amigo = rs.getString("amigo");
+                    String status = rs.getString("status");
+                    resposta.append(amigo).append(" (").append(status).append(")\n");
+                }
+                
+                if (!hasAmizades) {
+                    resposta.append("Você não tem amizades registradas.\n");
+                }
+                
+                saida.println(resposta.toString());
+            } catch (SQLException e) {
+                saida.println("ERRO Falha ao listar amizades: " + e.getMessage());
+            }
         }
     }
 }
