@@ -305,35 +305,35 @@ public class ServidorChat {
                         "SELECT login FROM usuarios WHERE login = ?");
                 checkUserStmt.setString(1, remetente);
                 ResultSet userRs = checkUserStmt.executeQuery();
-                
+
                 if (!userRs.next()) {
                     saida.println("ERRO Usuário " + remetente + " não existe no sistema");
                     return;
                 }
-                
+
                 // Verificar se existe uma solicitação pendente
                 PreparedStatement checkStmt = conexaoBanco.prepareStatement(
                         "SELECT * FROM amizades WHERE " +
-                        "((usuario1 = ? AND usuario2 = ?) OR (usuario1 = ? AND usuario2 = ?)) " +
-                        "AND status = 'pendente'");
+                                "((usuario1 = ? AND usuario2 = ?) OR (usuario1 = ? AND usuario2 = ?)) " +
+                                "AND status = 'pendente'");
                 checkStmt.setString(1, remetente);
                 checkStmt.setString(2, login);
                 checkStmt.setString(3, login);
                 checkStmt.setString(4, remetente);
                 ResultSet rs = checkStmt.executeQuery();
-                
+
                 if (rs.next()) {
                     // Atualizar status da amizade para aceita
                     PreparedStatement updateStmt = conexaoBanco.prepareStatement(
                             "UPDATE amizades SET status = 'aceita' WHERE " +
-                            "((usuario1 = ? AND usuario2 = ?) OR (usuario1 = ? AND usuario2 = ?)) " +
-                            "AND status = 'pendente'");
+                                    "((usuario1 = ? AND usuario2 = ?) OR (usuario1 = ? AND usuario2 = ?)) " +
+                                    "AND status = 'pendente'");
                     updateStmt.setString(1, remetente);
                     updateStmt.setString(2, login);
                     updateStmt.setString(3, login);
                     updateStmt.setString(4, remetente);
                     int rowsAffected = updateStmt.executeUpdate();
-                    
+
                     if (rowsAffected > 0) {
                         // Notificar o remetente se estiver online
                         ManipuladorCliente manipuladorRemetente = clientes.get(remetente);
@@ -359,19 +359,19 @@ public class ServidorChat {
                 // Atualizar status da amizade para recusada
                 PreparedStatement stmt = conexaoBanco.prepareStatement(
                         "UPDATE amizades SET status = 'recusada' WHERE " +
-                        "(usuario1 = ? AND usuario2 = ?) OR (usuario1 = ? AND usuario2 = ?)");
+                                "(usuario1 = ? AND usuario2 = ?) OR (usuario1 = ? AND usuario2 = ?)");
                 stmt.setString(1, remetente);
                 stmt.setString(2, login);
                 stmt.setString(3, login);
                 stmt.setString(4, remetente);
                 stmt.executeUpdate();
-                
+
                 // Notificar o remetente se estiver online
                 ManipuladorCliente manipuladorRemetente = clientes.get(remetente);
                 if (manipuladorRemetente != null) {
                     manipuladorRemetente.saida.println("CONTATO_RECUSADO " + login);
                 }
-                
+
                 saida.println("OK Chat recusado com " + remetente);
             } catch (SQLException e) {
                 saida.println("ERRO Falha ao recusar contato: " + e.getMessage());
@@ -382,13 +382,13 @@ public class ServidorChat {
         private boolean verificarAmizade(String usuario1, String usuario2) throws SQLException {
             PreparedStatement stmt = conexaoBanco.prepareStatement(
                     "SELECT status FROM amizades WHERE " +
-                    "((usuario1 = ? AND usuario2 = ?) OR (usuario1 = ? AND usuario2 = ?)) " +
-                    "AND status = 'aceita'");
+                            "((usuario1 = ? AND usuario2 = ?) OR (usuario1 = ? AND usuario2 = ?)) " +
+                            "AND status = 'aceita'");
             stmt.setString(1, usuario1);
             stmt.setString(2, usuario2);
             stmt.setString(3, usuario2);
             stmt.setString(4, usuario1);
-            
+
             try (ResultSet rs = stmt.executeQuery()) {
                 return rs.next(); // Se retornar algum resultado, são amigos
             }
@@ -401,21 +401,21 @@ public class ServidorChat {
                     "SELECT login FROM usuarios WHERE login = ?");
             checkUserStmt.setString(1, solicitado);
             ResultSet userRs = checkUserStmt.executeQuery();
-            
+
             if (!userRs.next()) {
                 throw new SQLException("Usuário destinatário não existe no sistema");
             }
-            
+
             // Verificar se já existe uma solicitação
             PreparedStatement checkStmt = conexaoBanco.prepareStatement(
                     "SELECT * FROM amizades WHERE " +
-                    "(usuario1 = ? AND usuario2 = ?) OR (usuario1 = ? AND usuario2 = ?)");
+                            "(usuario1 = ? AND usuario2 = ?) OR (usuario1 = ? AND usuario2 = ?)");
             checkStmt.setString(1, solicitante);
             checkStmt.setString(2, solicitado);
             checkStmt.setString(3, solicitado);
             checkStmt.setString(4, solicitante);
             ResultSet rs = checkStmt.executeQuery();
-            
+
             // Se não existir, criar uma nova
             if (!rs.next()) {
                 PreparedStatement insertStmt = conexaoBanco.prepareStatement(
@@ -616,22 +616,23 @@ public class ServidorChat {
             String nomeGrupo = args[0];
             String mensagem = args[1];
 
-            // Validação: só permite se o usuário for membro do grupo
+            // **Validação: só permite se o usuário for membro do grupo**
             try {
                 PreparedStatement stmt = conexaoBanco.prepareStatement(
-                    "SELECT 1 FROM membros_grupo WHERE nome_grupo = ? AND login_usuario = ?");
+                        "SELECT 1 FROM membros_grupo WHERE nome_grupo = ? AND login_usuario = ?");
                 stmt.setString(1, nomeGrupo);
                 stmt.setString(2, login);
                 ResultSet rs = stmt.executeQuery();
-                if (!rs.next()) {
+                if (!rs.next()) { // Se não houver resultado, o usuário não é membro do grupo
                     saida.println("ERRO Você não faz parte do grupo " + nomeGrupo);
-                    return;
+                    return; // Interrompe o processamento da mensagem
                 }
             } catch (SQLException e) {
                 saida.println("ERRO Falha ao verificar participação no grupo: " + e.getMessage());
-                return;
+                return; // Retorna em caso de erro no banco de dados
             }
 
+            // Se o usuário for membro do grupo, o restante do código para enviar a mensagem será executado
             try {
                 PreparedStatement stmt = conexaoBanco.prepareStatement(
                         "SELECT login_usuario FROM membros_grupo WHERE nome_grupo = ?");
@@ -803,30 +804,30 @@ public class ServidorChat {
                 saida.println("ERRO Não está logado");
                 return;
             }
-            
+
             try {
                 PreparedStatement stmt = conexaoBanco.prepareStatement(
                         "SELECT CASE WHEN usuario1 = ? THEN usuario2 ELSE usuario1 END AS amigo, " +
-                        "status FROM amizades WHERE usuario1 = ? OR usuario2 = ?");
+                                "status FROM amizades WHERE usuario1 = ? OR usuario2 = ?");
                 stmt.setString(1, login);
                 stmt.setString(2, login);
                 stmt.setString(3, login);
                 ResultSet rs = stmt.executeQuery();
-                
+
                 StringBuilder resposta = new StringBuilder("OK Suas amizades:\n");
                 boolean hasAmizades = false;
-                
+
                 while (rs.next()) {
                     hasAmizades = true;
                     String amigo = rs.getString("amigo");
                     String status = rs.getString("status");
                     resposta.append(amigo).append(" (").append(status).append(")\n");
                 }
-                
+
                 if (!hasAmizades) {
                     resposta.append("Você não tem amizades registradas.\n");
                 }
-                
+
                 saida.println(resposta.toString());
             } catch (SQLException e) {
                 saida.println("ERRO Falha ao listar amizades: " + e.getMessage());
