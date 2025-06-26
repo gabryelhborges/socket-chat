@@ -109,23 +109,41 @@ A aplicação utiliza uma interface de linha de comando com comandos baseados em
 Comandos Disponíveis
 
 REGISTRAR <nome_completo> <login> <email> <senha>: Registra um novo usuário.
+
 ENTRAR <login> <senha>: Faz login na aplicação.
+
 SAIR: Faz logout.
+
 STATUS <novo_status>: Atualiza o status do usuário (e.g., online, ocupado, ausente).
+
 LISTAR_USUARIOS: Lista todos os usuários e seus status.
+
 LISTAR_GRUPOS: Lista todos os grupos disponíveis.
+
 MSG_USUARIO <login_destinatario> <mensagem>: Envia uma solicitação de chat privado.
+
 ACEITAR_CHAT <login_remetente>: Aceita uma solicitação de chat privado.
+
 RECUSAR_CHAT <login_remetente>: Recusa uma solicitação de chat privado.
+
 PMSG <login_destinatario> <mensagem>: Envia uma mensagem privada após aceitação.
+
 CRIAR_GRUPO <nome_grupo>: Cria um novo grupo.
+
 ADICIONAR_A_GRUPO <nome_grupo> <login_usuario>: Convida um usuário para um grupo.
+
 SOLICITAR_ENTRADA_GRUPO <nome_grupo>: Solicita entrada em um grupo existente.
+
 RESPOSTA_CONVITE_GRUPO <nome_grupo> <sim/não>: Aceita ou recusa um convite de grupo.
+
 VOTAR_ENTRADA_GRUPO <nome_grupo> <login_solicitante> <sim/não>: Vota na entrada de um usuário em um grupo.
+
 MSG_GRUPO <nome_grupo> <mensagem>: Envia uma mensagem para todos os membros do grupo.
+
 MSG_GRUPO_ALVO <nome_grupo> <usuario1,usuario2> <mensagem>: Envia uma mensagem para usuários específicos no grupo.
+
 MSG_GRUPO_PRIVADA <nome_grupo>@<login_usuario> <mensagem>: Envia uma mensagem privada a um membro do grupo.
+
 SAIR_GRUPO <nome_grupo>: Sai de um grupo.
 
 Exemplo de Interação
