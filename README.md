@@ -150,37 +150,46 @@ Exemplo de Interação
 
 Registrar e Entrar:
 > REGISTRAR João Silva joaosilva joao@exemplo.com senha123
-OK Registrado com sucesso
+
+> OK Registrado com sucesso
+
 > ENTRAR joaosilva senha123
-OK Entrada bem-sucedida
+
+> OK Entrada bem-sucedida
 
 
 Criar e Gerenciar Grupos:
 > CRIAR_GRUPO meugrupo
-OK Grupo meugrupo criado
+
+> OK Grupo meugrupo criado
+
 > ADICIONAR_A_GRUPO meugrupo mariasilva
-OK Convite enviado para mariasilva
+
+> OK Convite enviado para mariasilva
 
 (No cliente da Maria):
 CONVITE_GRUPO meugrupo joaosilva
 > RESPOSTA_CONVITE_GRUPO meugrupo sim
-OK Entrou no grupo meugrupo
+
+> OK Entrou no grupo meugrupo
 
 
 Enviar Mensagens:
 > MSG_GRUPO meugrupo Olá a todos!
-OK Mensagem de grupo enviada para meugrupo
+
+> OK Mensagem de grupo enviada para meugrupo
 
 (Membros do grupo recebem):
-NOVA_MSG_GRUPO meugrupo joaosilva 2025-05-25 10:40:00.0 Olá a todos!
+> NOVA_MSG_GRUPO meugrupo joaosilva 2025-05-25 10:40:00.0 Olá a todos!
 
 
 Mensagem Privada:
 > PMSG mariasilva Oi Maria!
-OK Mensagem privada enviada para mariasilva
+
+> OK Mensagem privada enviada para mariasilva
 
 (Maria recebe):
-NOVA_MSG joaosilva Oi Maria!
+> NOVA_MSG joaosilva Oi Maria!
 
 
 
